@@ -15,7 +15,8 @@
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@letsbelopez/cognito-core": ["packages/cognito-core/src/index.ts"]
+      "@letsbelopez/cognito-core": ["packages/cognito-core/src/index.ts"],
+      "@letsbelopez/react-cognito": ["packages/react-cognito/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
