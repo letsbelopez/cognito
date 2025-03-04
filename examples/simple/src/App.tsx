@@ -1,34 +1,59 @@
 import { useState } from 'react'
-import { AuthProvider, useSignUp, useSignIn, useSignOut, useCurrentUser } from '@letsbelopez/react-cognito'
+import { AuthProvider, useSignUp, useSignIn, useSignOut, useCurrentUser, useConfirmSignUp } from '@letsbelopez/react-cognito'
 import './App.css'
 
 const cognitoConfig = {
-  userPoolId: 'YOUR_USER_POOL_ID',
-  clientId: 'YOUR_CLIENT_ID',
-  region: 'YOUR_REGION',
+  userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
+  clientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
+  region: import.meta.env.VITE_COGNITO_REGION,
 }
 
 function AuthContent() {
   const [formData, setFormData] = useState({
-    username: '',
-    password: '',
     email: '',
+    password: '',
+    verificationCode: '',
   })
   const [isSignUp, setIsSignUp] = useState(false)
+  const [needsVerification, setNeedsVerification] = useState(false)
+  const [verificationEmail, setVerificationEmail] = useState('')
 
   const { execute: signUp, isLoading: isSigningUp, error: signUpError } = useSignUp()
   const { execute: signIn, isLoading: isSigningIn, error: signInError } = useSignIn()
+  const { execute: confirmSignUp, isLoading: isConfirming } = useConfirmSignUp()
   const { execute: signOut } = useSignOut()
   const { user, isAuthenticated, isLoading } = useCurrentUser()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const { username, password, email } = formData
+    const { email, password, verificationCode } = formData
 
-    if (isSignUp) {
-      await signUp(username, password, email)
+    if (needsVerification) {
+      try {
+        // Only confirm the signup with the verification code
+        await confirmSignUp(verificationEmail || email, verificationCode)
+        setNeedsVerification(false)
+        // After verification, automatically sign in
+        await signIn(verificationEmail || email, password)
+      } catch (error) {
+        console.error('Verification failed:', error)
+      }
+    } else if (isSignUp) {
+      try {
+        await signUp(email, password, email)
+        setVerificationEmail(email)
+        setNeedsVerification(true)
+      } catch (error: any) {
+        if (error.message?.includes('User already exists')) {
+          // If user exists but isn't verified, move to verification
+          setVerificationEmail(email)
+          setNeedsVerification(true)
+        } else {
+          console.error('Sign up failed:', error)
+        }
+      }
     } else {
-      await signIn(username, password)
+      await signIn(email, password)
     }
   }
 
@@ -44,9 +69,75 @@ function AuthContent() {
   if (isAuthenticated && user) {
     return (
       <div className="auth-container">
-        <h2>Welcome, {user.username}!</h2>
+        <h2>Welcome, {user.email}!</h2>
         <button onClick={signOut} className="auth-button">
           Sign Out
+        </button>
+      </div>
+    )
+  }
+
+  if (needsVerification) {
+    return (
+      <div className="auth-container">
+        <h2>Verify Your Email</h2>
+        {!verificationEmail && (
+          <div className="form-group">
+            <p>Enter the email you signed up with:</p>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+        )}
+        {verificationEmail && <p>Please check your email ({verificationEmail}) for a verification code.</p>}
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="verificationCode">Verification Code:</label>
+            <input
+              type="text"
+              id="verificationCode"
+              name="verificationCode"
+              value={formData.verificationCode}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+          {!verificationEmail && (
+            <div className="form-group">
+              <label htmlFor="password">Password:</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+          )}
+          {signUpError && (
+            <div className="error-message">
+              {signUpError.message}
+            </div>
+          )}
+          <button type="submit" className="auth-button" disabled={isSigningUp || isConfirming}>
+            {isSigningUp || isConfirming ? 'Verifying...' : 'Verify Email'}
+          </button>
+        </form>
+        <button
+          onClick={() => {
+            setNeedsVerification(false)
+            setVerificationEmail('')
+            setFormData(prev => ({ ...prev, verificationCode: '' }))
+          }}
+          className="toggle-button"
+        >
+          Back to {isSignUp ? 'Sign Up' : 'Sign In'}
         </button>
       </div>
     )
@@ -57,12 +148,12 @@ function AuthContent() {
       <h2>{isSignUp ? 'Sign Up' : 'Sign In'}</h2>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="username">Username:</label>
+          <label htmlFor="email">Email:</label>
           <input
-            type="text"
-            id="username"
-            name="username"
-            value={formData.username}
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
             onChange={handleInputChange}
             required
           />
@@ -78,19 +169,6 @@ function AuthContent() {
             required
           />
         </div>
-        {isSignUp && (
-          <div className="form-group">
-            <label htmlFor="email">Email:</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-        )}
         {(signUpError || signInError) && (
           <div className="error-message">
             {signUpError?.message || signInError?.message}
@@ -100,12 +178,26 @@ function AuthContent() {
           {isSigningUp || isSigningIn ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
         </button>
       </form>
-      <button
-        onClick={() => setIsSignUp(!isSignUp)}
-        className="toggle-button"
-      >
-        {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-      </button>
+      <div className="auth-links">
+        <button
+          onClick={() => {
+            setIsSignUp(!isSignUp)
+            setNeedsVerification(false)
+          }}
+          className="toggle-button"
+        >
+          {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+        </button>
+        <button
+          onClick={() => {
+            setNeedsVerification(true)
+            setVerificationEmail('')
+          }}
+          className="toggle-button"
+        >
+          Need to verify your email?
+        </button>
+      </div>
     </div>
   )
 }

@@ -31,6 +31,13 @@ export const useSignOut = (): UseAuthHookResult<() => Promise<void>> => {
   return { execute, isLoading, error };
 };
 
+export const useConfirmSignUp = (): UseAuthHookResult<(username: string, code: string) => Promise<void>> => {
+  const { confirmSignUp, isLoading, error } = useAuth();
+  const execute = useCallback(confirmSignUp, [confirmSignUp]);
+
+  return { execute, isLoading, error };
+};
+
 export const useCurrentUser = (): {
   user: AuthUser | null;
   isAuthenticated: boolean;

@@ -5,6 +5,7 @@ interface AuthContextValue extends AuthState {
   signUp: (username: string, password: string, email: string, attributes?: Record<string, string>) => Promise<void>;
   signIn: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  confirmSignUp: (username: string, code: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -85,6 +86,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
     }
   };
 
+  const confirmSignUp = async (username: string, code: string) => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      await authService.confirmSignUp(username, code);
+      dispatch({ type: 'SET_LOADING', payload: false });
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error as AuthError });
+    }
+  };
+
   useEffect(() => {
     const checkAuth = async () => {
       const accessToken = localStorage.getItem('cognito_access_token');
@@ -119,6 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
     signUp,
     signIn,
     signOut,
+    confirmSignUp,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -8,6 +8,7 @@ import {
   SignUpCommandOutput,
   InitiateAuthCommandOutput,
   GetUserCommandOutput,
+  ConfirmSignUpCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import type { CognitoConfig, SignUpParams, SignInParams, AuthUser, AuthError } from './types';
 
@@ -127,6 +128,20 @@ export class CognitoAuthService {
         email: attributes['email'],
         attributes,
       };
+    } catch (error) {
+      throw this.handleError(error as Error);
+    }
+  }
+
+  async confirmSignUp(username: string, code: string): Promise<void> {
+    try {
+      const command = new ConfirmSignUpCommand({
+        ClientId: this.config.clientId,
+        Username: username,
+        ConfirmationCode: code,
+      });
+
+      await this.client.send(command);
     } catch (error) {
       throw this.handleError(error as Error);
     }
