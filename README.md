@@ -6,6 +6,60 @@
 
 [Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/tutorials/npm-workspaces-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
 
+## Development Workflow
+
+This project uses a monorepo structure with two main packages:
+- `@letsbelopez/cognito-core`: Core Cognito functionality
+- `@letsbelopez/react-cognito`: React hooks and components for Cognito integration
+
+### Building the Packages
+
+To build all packages:
+```sh
+pnpm nx run-many -t=build
+```
+
+### Working with Examples
+
+Example projects are located in the `examples/` directory. They are standalone projects that use local file references to the core packages for development purposes.
+
+To run an example (e.g., the simple React example):
+```sh
+cd examples/simple
+pnpm install
+pnpm dev
+```
+
+#### Development Process
+
+When making changes to core packages:
+
+1. **Active Development (Recommended)**:
+   - Keep the example's dev server running (`pnpm dev`)
+   - Make changes to core packages
+   - Vite will automatically reload with your changes
+   - No rebuild needed for most changes
+
+2. **Testing Built Packages**:
+   ```sh
+   # From root directory
+   pnpm nx run-many -t=build  # Build core packages
+   cd examples/simple
+   pnpm install  # Reinstall to get fresh builds
+   pnpm dev
+   ```
+
+3. **Troubleshooting**:
+   If changes aren't reflecting:
+   ```sh
+   # From examples/simple directory
+   rm -rf node_modules/.vite  # Clear Vite cache
+   # or
+   rm -rf node_modules  # Clean install
+   pnpm install
+   pnpm dev
+   ```
+
 ## Run tasks
 
 To run tasks with Nx use:

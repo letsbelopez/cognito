@@ -55,7 +55,13 @@
     "includedScripts": []
   },
   "dependencies": {
+    "@letsbelopez/react-cognito": "link:packages/react-cognito",
     "react": "18.3.1",
     "react-dom": "18.3.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "@letsbelopez/react-cognito": "link:packages/react-cognito"
+    }
   }
 }
