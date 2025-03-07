@@ -40,8 +40,15 @@ function AuthContent() {
         // Only confirm the signup with the verification code
         await confirmSignUp(verificationEmail || email, verificationCode)
         setNeedsVerification(false)
-        // After verification, automatically sign in
-        await signIn(verificationEmail || email, password)
+        // After verification, transition to sign in form with email pre-filled
+        setIsSignUp(false)
+        setFormData(prev => ({
+          ...prev,
+          verificationCode: '',
+          password: '',
+          email: verificationEmail || email,
+          error: '',
+        }))
       } catch (error) {
         console.error('Verification failed:', error)
       }
@@ -50,11 +57,23 @@ function AuthContent() {
         await signUp(email, password, email)
         setVerificationEmail(email)
         setNeedsVerification(true)
+        // Clear password after successful sign up
+        setFormData(prev => ({
+          ...prev,
+          password: '',
+          error: '',
+        }));
       } catch (error: any) {
         if (error.message?.includes('User already exists')) {
           // If user exists but isn't verified, move to verification
           setVerificationEmail(email)
           setNeedsVerification(true)
+          // Also clear password in this case
+          setFormData(prev => ({
+            ...prev,
+            password: '',
+            error: '',
+          }));
         } else {
           console.error('Sign up failed:', error)
         }
@@ -65,6 +84,14 @@ function AuthContent() {
         console.log('Starting sign in...')
         const result = await signIn(email, password)
         console.log('Sign in completed:', { result, isAuthenticated, user })
+        
+        // Clear form data after successful sign in
+        setFormData({
+          email: '',
+          password: '',
+          verificationCode: '',
+          error: '',
+        });
         
         // Force a re-render if needed
         if (!isAuthenticated) {
