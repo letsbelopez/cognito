@@ -67,9 +67,69 @@
   text-decoration: underline;
 }
 
+.loading-dots {
+  animation: loading-dots 1.4s infinite;
+  display: inline-block;
+}
+
+@keyframes loading-dots {
+  0%, 20% { content: '.'; }
+  40%, 60% { content: '..'; }
+  80%, 100% { content: '...'; }
+}
+
 .error-message {
-  color: #dc2626;
-  margin: 0.5rem 0;
+  color: #842029;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 12px;
+  margin: 10px 0;
+  text-align: center;
   font-size: 0.9rem;
-  text-align: left;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.success-message {
+  color: #0f5132;
+  background-color: #d1e7dd;
+  border: 1px solid #badbcc;
+  border-radius: 4px;
+  padding: 12px;
+  margin: 10px 0;
+  text-align: center;
+  font-size: 0.9rem;
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.loading-state {
+  text-align: center;
+  padding: 2rem;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  margin: 1rem auto;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #646cff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

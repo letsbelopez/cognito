@@ -8,11 +8,15 @@ const cognitoConfig = {
   region: import.meta.env.VITE_COGNITO_REGION,
 }
 
+// Debug Cognito configuration
+console.log('Cognito Config:', cognitoConfig)
+
 function AuthContent() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     verificationCode: '',
+    error: '',
   })
   const [isSignUp, setIsSignUp] = useState(false)
   const [needsVerification, setNeedsVerification] = useState(false)
@@ -23,6 +27,9 @@ function AuthContent() {
   const { execute: confirmSignUp, isLoading: isConfirming } = useConfirmSignUp()
   const { execute: signOut } = useSignOut()
   const { user, isAuthenticated, isLoading } = useCurrentUser()
+
+  // Debug logs for authentication state
+  console.log('Auth State:', { isAuthenticated, isLoading, user })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,7 +60,25 @@ function AuthContent() {
         }
       }
     } else {
-      await signIn(email, password)
+      try {
+        setFormData(prev => ({ ...prev, error: '' }))
+        console.log('Starting sign in...')
+        const result = await signIn(email, password)
+        console.log('Sign in completed:', { result, isAuthenticated, user })
+        
+        // Force a re-render if needed
+        if (!isAuthenticated) {
+          console.log('Authentication state not updated, forcing refresh...')
+          // Wait a moment for the state to update
+          setTimeout(() => {
+            setFormData(prev => ({ ...prev }))
+          }, 500)
+        }
+      } catch (error: any) {
+        console.error('Sign in failed:', error)
+        const errorMessage = error.message || 'Failed to sign in. Please check your credentials and try again.'
+        setFormData(prev => ({ ...prev, error: errorMessage }))
+      }
     }
   }
 
@@ -63,12 +88,22 @@ function AuthContent() {
   }
 
   if (isLoading) {
-    return <div>Loading...</div>
+    return (
+      <div className="auth-container">
+        <div className="loading-state">
+          <h2>Loading...</h2>
+          <div className="loading-spinner"></div>
+        </div>
+      </div>
+    )
   }
 
   if (isAuthenticated && user) {
     return (
       <div className="auth-container">
+        <div className="success-message">
+          Successfully signed in!
+        </div>
         <h2>Welcome, {user.email}!</h2>
         <button onClick={signOut} className="auth-button">
           Sign Out
@@ -120,11 +155,11 @@ function AuthContent() {
               />
             </div>
           )}
-          {signUpError && (
+          {((signUpError?.message || signInError?.message || formData.error) && (
             <div className="error-message">
-              {signUpError.message}
+              {signUpError?.message || signInError?.message || formData.error}
             </div>
-          )}
+          ))}
           <button type="submit" className="auth-button" disabled={isSigningUp || isConfirming}>
             {isSigningUp || isConfirming ? 'Verifying...' : 'Verify Email'}
           </button>
@@ -169,13 +204,20 @@ function AuthContent() {
             required
           />
         </div>
-        {(signUpError || signInError) && (
+        {((signUpError?.message || signInError?.message || formData.error) && (
           <div className="error-message">
-            {signUpError?.message || signInError?.message}
+            {signUpError?.message || signInError?.message || formData.error}
           </div>
-        )}
+        ))}
         <button type="submit" className="auth-button" disabled={isSigningUp || isSigningIn}>
-          {isSigningUp || isSigningIn ? 'Loading...' : isSignUp ? 'Sign Up' : 'Sign In'}
+          {isSigningUp || isSigningIn ? (
+            <>
+              {isSignUp ? 'Signing up...' : 'Signing in...'}
+              <span className="loading-dots">...</span>
+            </>
+          ) : (
+            isSignUp ? 'Sign Up' : 'Sign In'
+          )}
         </button>
       </form>
       <div className="auth-links">
