@@ -1,4 +1,4 @@
 export * from './lib/react-cognito';
-export { AuthProvider } from './context';
-export { useSignUp, useSignIn, useSignOut, useCurrentUser, useConfirmSignUp } from './hooks';
-export type { CognitoConfig, AuthUser, AuthError, AuthState } from '@letsbelopez/cognito-core';
+export { AuthProvider, type TokenStorageStrategy, type AuthProviderConfig } from './context';
+export { useSignUp, useSignIn, useSignOut, useConfirmSignUp, useCurrentUser } from './hooks';
+export type { AuthError } from '@letsbelopez/cognito-core';

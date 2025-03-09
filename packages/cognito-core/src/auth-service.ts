@@ -147,6 +147,33 @@ export class CognitoAuthService {
     }
   }
 
+  async refreshSession(refreshToken: string): Promise<{ accessToken: string; idToken: string; refreshToken: string } | null> {
+    try {
+      const command = new InitiateAuthCommand({
+        AuthFlow: AuthFlowType.REFRESH_TOKEN_AUTH,
+        ClientId: this.config.clientId,
+        AuthParameters: {
+          REFRESH_TOKEN: refreshToken,
+        },
+      });
+
+      const response = await this.client.send(command);
+      const authResult = response.AuthenticationResult;
+
+      if (!authResult?.AccessToken || !authResult.IdToken) {
+        return null;
+      }
+
+      return {
+        accessToken: authResult.AccessToken,
+        idToken: authResult.IdToken,
+        refreshToken: authResult.RefreshToken || refreshToken, // Use existing refresh token if not provided
+      };
+    } catch (error) {
+      throw this.handleError(error as Error);
+    }
+  }
+
   private handleError(error: Error): AuthError {
     return {
       code: (error as any).name || 'UnknownError',
