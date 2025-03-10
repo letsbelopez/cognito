@@ -1,0 +1,13 @@
+src/
+tests/
+*.test.*
+.turbo
+tsconfig.json
+.eslintrc*
+jest.config.*
+coverage/
+.nx/
+
+# Ensure these are NOT ignored
+!dist/
+!dist/* 

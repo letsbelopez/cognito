@@ -63,5 +63,8 @@
     "overrides": {
       "@letsbelopez/react-cognito": "link:packages/react-cognito"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

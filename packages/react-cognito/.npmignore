@@ -1,0 +1,9 @@
+src/
+tests/
+*.test.*
+.turbo
+tsconfig.json
+.eslintrc*
+jest.config.*
+coverage/
+.nx/ 
