@@ -1,18 +1,21 @@
 {
   "name": "@letsbelopez/react-cognito",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": false,
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
   },
   "dependencies": {
-    "@letsbelopez/cognito-core": "workspace:*"
+    "@letsbelopez/cognito-core": "0.2.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.61",

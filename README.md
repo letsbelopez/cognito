@@ -1,162 +1,136 @@
 # Cognito
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+A lightweight wrapper around AWS Cognito User Pools that provides a simple authentication solution for React applications.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+## Packages
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/tutorials/npm-workspaces-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+This monorepo contains two main packages:
 
-## Development Workflow
+- `@letsbelopez/cognito-core`: Core authentication functionality wrapping AWS Cognito User Pools
+- `@letsbelopez/react-cognito`: React hooks and components for easy Cognito integration
 
-This project uses a monorepo structure with two main packages:
-- `@letsbelopez/cognito-core`: Core Cognito functionality
-- `@letsbelopez/react-cognito`: React hooks and components for Cognito integration
+## Installation
 
-### Building the Packages
-
-To build all packages:
 ```sh
-pnpm nx run-many -t=build
+# Install the React package (recommended for React applications)
+npm install @letsbelopez/react-cognito
+
+# Or if you only need the core functionality
+npm install @letsbelopez/cognito-core
 ```
 
-### Working with Examples
+## Quick Start
 
-Example projects are located in the `examples/` directory. They are standalone projects that use local file references to the core packages for development purposes.
+1. Wrap your app with the `AuthProvider`:
 
-To run an example (e.g., the simple React example):
+```tsx
+import { AuthProvider } from '@letsbelopez/react-cognito';
+
+function App() {
+  return (
+    <AuthProvider
+      region="us-east-1"
+      userPoolId="us-east-1_xxxxxx"
+      clientId="your-client-id"
+    >
+      <YourApp />
+    </AuthProvider>
+  );
+}
+```
+
+2. Use the authentication hooks in your components:
+
+```tsx
+import { 
+  useSignIn, 
+  useSignUp, 
+  useSignOut,
+  useCurrentUser 
+} from '@letsbelopez/react-cognito';
+
+function LoginComponent() {
+  const { signIn, isLoading, error } = useSignIn();
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await signIn({
+        username: 'user@example.com',
+        password: 'password123'
+      });
+    } catch (err) {
+      console.error('Sign in failed:', err);
+    }
+  };
+
+  return (
+    // Your login form
+  );
+}
+
+function UserProfile() {
+  const { user, isLoading } = useCurrentUser();
+
+  if (isLoading) return <div>Loading...</div>;
+  if (!user) return <div>Please sign in</div>;
+
+  return <div>Welcome, {user.email}</div>;
+}
+```
+
+## Available Hooks
+
+- `useSignIn()`: Handle user sign in
+- `useSignUp()`: Handle new user registration
+- `useConfirmSignUp()`: Confirm user registration with verification code
+- `useSignOut()`: Handle user sign out
+- `useCurrentUser()`: Access the current authenticated user
+
+## Token Storage
+
+By default, tokens are stored in memory. You can customize the storage strategy when setting up the AuthProvider:
+
+```tsx
+import { AuthProvider } from '@letsbelopez/react-cognito';
+
+const customStorage: TokenStorageStrategy = {
+  getRefreshToken: () => // your custom get logic,
+  setRefreshToken: (token) => // your custom set logic,
+  removeToken: () => // your custom remove logic
+};
+
+function App() {
+  return (
+    <AuthProvider
+      region="us-east-1"
+      userPoolId="us-east-1_xxxxxx"
+      clientId="your-client-id"
+      tokenStorage={customStorage}
+    >
+      <YourApp />
+    </AuthProvider>
+  );
+}
+```
+
+## Development
+
+This project uses a monorepo structure managed with pnpm and Nx. To contribute:
+
 ```sh
+# Install dependencies
+pnpm install
+
+# Build all packages
+pnpm nx run-many -t=build
+
+# Run examples
 cd examples/simple
 pnpm install
 pnpm dev
 ```
 
-#### Development Process
+## License
 
-When making changes to core packages:
-
-1. **Active Development (Recommended)**:
-   - Keep the example's dev server running (`pnpm dev`)
-   - Make changes to core packages
-   - Vite will automatically reload with your changes
-   - No rebuild needed for most changes
-
-2. **Testing Built Packages**:
-   ```sh
-   # From root directory
-   pnpm nx run-many -t=build  # Build core packages
-   cd examples/simple
-   pnpm install  # Reinstall to get fresh builds
-   pnpm dev
-   ```
-
-3. **Troubleshooting**:
-   If changes aren't reflecting:
-   ```sh
-   # From examples/simple directory
-   rm -rf node_modules/.vite  # Clear Vite cache
-   # or
-   rm -rf node_modules  # Clean install
-   pnpm install
-   pnpm dev
-   ```
-
-## Run tasks
-
-To run tasks with Nx use:
-
-```sh
-npx nx <target> <project-name>
-```
-
-For example:
-
-```sh
-npx nx build myproject
-```
-
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
-
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Versioning and releasing
-
-To version and release the library use
-
-```
-npx nx release
-```
-
-Pass `--dry-run` to see what would happen without actually releasing the library.
-
-[Learn more about Nx release &raquo;](hhttps://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Add new projects
-
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
-
-To install a new plugin you can use the `nx add` command. Here's an example of adding the React plugin:
-```sh
-npx nx add @nx/react
-```
-
-Use the plugin's generator to create new projects. For example, to create a new React app or library:
-
-```sh
-# Generate an app
-npx nx g @nx/react:app demo
-
-# Generate a library
-npx nx g @nx/react:lib some-lib
-```
-
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
-
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Set up CI!
-
-### Step 1
-
-To connect to Nx Cloud, run the following command:
-
-```sh
-npx nx connect
-```
-
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
-
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Step 2
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
-```
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/getting-started/tutorials/npm-workspaces-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+MIT
