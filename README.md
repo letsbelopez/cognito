@@ -1,3 +1,5 @@
+![React Cognito Header](https://raw.githubusercontent.com/letsbelopez/cognito/master/media/repo-header.png)
+
 # Cognito
 
 A lightweight wrapper around AWS Cognito User Pools that provides a simple authentication solution for React applications.
