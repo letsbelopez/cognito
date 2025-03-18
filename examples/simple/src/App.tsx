@@ -312,7 +312,7 @@ function App() {
   return (
     <AuthProvider config={cognitoConfig}>
       <div className="app">
-        <h1>React Cognito Example</h1>
+        <h1>React Cognito</h1>
         <AuthContent />
       </div>
     </AuthProvider>
