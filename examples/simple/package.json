@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@letsbelopez/react-cognito": "file:../../packages/react-cognito",
-    "@letsbelopez/cognito-core": "file:../../packages/cognito-core",
+    "@letsbelopez/cognito-core": "0.3.0",
+    "@letsbelopez/react-cognito": "0.3.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
@@ -26,6 +26,6 @@
     "globals": "^15.15.0",
     "typescript": "~5.7.2",
     "typescript-eslint": "^8.24.1",
-    "vite": "^6.2.0"
+    "vite": "^6.2.2"
   }
 }

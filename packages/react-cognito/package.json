@@ -2,9 +2,9 @@
   "name": "@letsbelopez/react-cognito",
   "version": "0.2.0",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./index.js",
+  "module": "./index.js",
+  "types": "./index.d.ts",
   "sideEffects": false,
   "license": "MIT",
   "publishConfig": {
