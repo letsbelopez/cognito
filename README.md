@@ -133,6 +133,46 @@ pnpm install
 pnpm dev
 ```
 
+## Releasing New Versions
+
+This project uses Nx to manage releases. The following steps are used to publish a new version:
+
+### Prerequisites
+
+- Access to the npm registry with publish rights for the packages
+- Git configured with appropriate access to commit and push to the repository
+
+### Release Process
+
+1. Ensure all packages are built with the latest changes:
+   ```sh
+   pnpm nx run-many -t build
+   ```
+
+2. Bump the versions of all packages. Use one of the following options:
+   - `patch` - for backwards-compatible bug fixes
+   - `minor` - for new backwards-compatible functionality
+   - `major` - for incompatible API changes
+   ```sh
+   pnpm dlx nx release version minor
+   ```
+
+3. Generate a changelog for the new version:
+   ```sh
+   pnpm dlx nx release changelog <version>
+   ```
+   Replace `<version>` with the new version number (e.g., `0.4.0`).
+
+4. Publish the packages to npm:
+   ```sh
+   pnpm dlx nx release publish
+   ```
+
+For a dry run to see what would happen without making changes, add the `--dry-run` flag to any of the commands:
+```sh
+pnpm dlx nx release --dry-run
+```
+
 ## License
 
 MIT
