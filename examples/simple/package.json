@@ -10,8 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@letsbelopez/cognito-core": "0.3.0",
-    "@letsbelopez/react-cognito": "0.3.0",
+    "@letsbelopez/cognito-core": "workspace:*",
+    "@letsbelopez/react-cognito": "workspace:*",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },

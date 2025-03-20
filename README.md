@@ -116,22 +116,35 @@ function App() {
 }
 ```
 
-## Development
-
-This project uses a monorepo structure managed with pnpm and Nx. To contribute:
-
-```sh
-# Install dependencies
-pnpm install
-
-# Build all packages
-pnpm nx run-many -t=build
-
-# Run examples
-cd examples/simple
-pnpm install
-pnpm dev
-```
+#### Development
+ 
+ When making changes to core packages:
+ 
+ 1. **Active Development (Recommended)**:
+    - Keep the example's dev server running (`pnpm dev`)
+    - Make changes to core packages
+    - Vite will automatically reload with your changes
+    - No rebuild needed for most changes
+ 
+ 2. **Testing Built Packages**:
+    ```sh
+    # From root directory
+    pnpm nx run-many -t=build  # Build core packages
+    cd examples/simple
+    pnpm install  # Reinstall to get fresh builds
+    pnpm dev
+    ```
+ 
+ 3. **Troubleshooting**:
+    If changes aren't reflecting:
+    ```sh
+    # From examples/simple directory
+    rm -rf node_modules/.vite  # Clear Vite cache
+    # or
+    rm -rf node_modules  # Clean install
+    pnpm install
+    pnpm dev
+    ```
 
 ## Releasing New Versions
 
