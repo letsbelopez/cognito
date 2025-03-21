@@ -1,23 +1,30 @@
 import { useState } from 'react';
 import { useAuth } from './context';
-import type { AuthError, AuthUser } from './context';
+import type { AuthError, AuthUser, SignUpResult, ConfirmSignUpResult } from './context';
 
-interface UseAuthOperation<T extends any[]> {
-  execute: (...args: T) => Promise<void>;
+interface UseAuthOperation<T extends any[], R = void> {
+  execute: (...args: T) => Promise<R>;
   isLoading: boolean;
   error: AuthError | null;
 }
 
-export const useSignUp = (): UseAuthOperation<[string, string, string, Record<string, string>?]> => {
+export const useSignUp = (): UseAuthOperation<[string, string, string, Record<string, string>?, boolean?], SignUpResult> => {
   const { signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
 
-  const execute = async (username: string, password: string, email: string, attributes?: Record<string, string>) => {
+  const execute = async (
+    username: string, 
+    password: string, 
+    email: string, 
+    attributes?: Record<string, string>,
+    autoSignIn?: boolean
+  ) => {
     setIsLoading(true);
     setError(null);
     try {
-      await signUp(username, password, email, attributes);
+      const result = await signUp(username, password, email, attributes, autoSignIn);
+      return result;
     } catch (err) {
       setError(err as AuthError);
       throw err;
@@ -71,7 +78,7 @@ export const useSignOut = (): UseAuthOperation<[]> => {
   return { execute, isLoading, error };
 };
 
-export const useConfirmSignUp = (): UseAuthOperation<[string, string]> => {
+export const useConfirmSignUp = (): UseAuthOperation<[string, string], ConfirmSignUpResult> => {
   const { confirmSignUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<AuthError | null>(null);
@@ -80,7 +87,8 @@ export const useConfirmSignUp = (): UseAuthOperation<[string, string]> => {
     setIsLoading(true);
     setError(null);
     try {
-      await confirmSignUp(username, code);
+      const result = await confirmSignUp(username, code);
+      return result;
     } catch (err) {
       setError(err as AuthError);
       throw err;

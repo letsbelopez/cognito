@@ -58,6 +58,8 @@ function AuthContent() {
   const [isSignUp, setIsSignUp] = useState(false)
   const [needsVerification, setNeedsVerification] = useState(false)
   const [verificationEmail, setVerificationEmail] = useState('')
+  // Add a state to enable/disable auto sign-in
+  const [autoSignIn, setAutoSignIn] = useState(true)
 
   const { execute: signUp, isLoading: isSigningUp, error: signUpError } = useSignUp()
   const { execute: signIn, isLoading: isSigningIn, error: signInError } = useSignIn()
@@ -74,24 +76,58 @@ function AuthContent() {
 
     if (needsVerification) {
       try {
-        // Only confirm the signup with the verification code
-        await confirmSignUp(verificationEmail || email, verificationCode)
-        setNeedsVerification(false)
-        // After verification, transition to sign in form with email pre-filled
-        setIsSignUp(false)
-        setFormData(prev => ({
-          ...prev,
-          verificationCode: '',
-          password: '',
-          email: verificationEmail || email,
-          error: '',
-        }))
+        // Confirm the signup with the verification code
+        const result = await confirmSignUp(verificationEmail || email, verificationCode)
+        console.log('Verification result:', result)
+        
+        // If auto sign-in is enabled, the user will be signed in automatically
+        // So no need to transition to sign-in form if user is now authenticated
+        if (result.autoSignInEnabled) {
+          if (!isAuthenticated) {
+            // Auto sign-in should happen automatically but if it doesn't, give feedback
+            console.log('Auto sign-in was enabled but user is not yet authenticated. Waiting...')
+            // Give a short delay to let auth state update if needed
+            setTimeout(() => {
+              if (isAuthenticated) {
+                setNeedsVerification(false)
+              } else {
+                // If auto sign-in failed, go to sign in screen
+                setNeedsVerification(false)
+                setIsSignUp(false)
+                setFormData(prev => ({
+                  ...prev,
+                  verificationCode: '',
+                  password: '',
+                  email: verificationEmail || email,
+                  error: '',
+                }))
+              }
+            }, 1000)
+          } else {
+            // User is already authenticated, clear verification state
+            setNeedsVerification(false)
+          }
+        } else {
+          // If auto sign-in was not enabled, transition to sign in form
+          setNeedsVerification(false)
+          setIsSignUp(false)
+          setFormData(prev => ({
+            ...prev,
+            verificationCode: '',
+            password: '',
+            email: verificationEmail || email,
+            error: '',
+          }))
+        }
       } catch (error) {
         console.error('Verification failed:', error)
       }
     } else if (isSignUp) {
       try {
-        await signUp(email, password, email)
+        // Pass the autoSignIn flag to the signUp function
+        const result = await signUp(email, password, email, undefined, autoSignIn)
+        console.log('Sign up result:', result)
+        
         setVerificationEmail(email)
         setNeedsVerification(true)
         // Clear password after successful sign up
@@ -147,8 +183,15 @@ function AuthContent() {
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    const { name, value, type, checked } = e.target
+    setFormData((prev) => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }))
+  }
+
+  const handleAutoSignInToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAutoSignIn(e.target.checked)
   }
 
   if (isLoading) {
@@ -193,7 +236,12 @@ function AuthContent() {
             />
           </div>
         )}
-        {verificationEmail && <p>Please check your email ({verificationEmail}) for a verification code.</p>}
+        {verificationEmail && (
+          <p>
+            Please check your email ({verificationEmail}) for a verification code.
+            {autoSignIn && <strong> You will be automatically signed in after verification.</strong>}
+          </p>
+        )}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="verificationCode">Verification Code:</label>
@@ -268,6 +316,20 @@ function AuthContent() {
             required
           />
         </div>
+        {isSignUp && (
+          <div className="form-group form-checkbox">
+            <input
+              type="checkbox"
+              id="autoSignIn"
+              name="autoSignIn"
+              checked={autoSignIn}
+              onChange={handleAutoSignInToggle}
+            />
+            <label htmlFor="autoSignIn">
+              Enable auto sign-in after email verification
+            </label>
+          </div>
+        )}
         {((signUpError?.message || signInError?.message || formData.error) && (
           <div className="error-message">
             {signUpError?.message || signInError?.message || formData.error}

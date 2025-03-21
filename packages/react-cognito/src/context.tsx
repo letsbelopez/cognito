@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import { CognitoAuthService, CognitoConfig, AuthState, AuthUser, AuthError } from '@letsbelopez/cognito-core';
+import { CognitoAuthService, CognitoConfig, AuthState, AuthUser, AuthError, SignUpResult, ConfirmSignUpResult } from '@letsbelopez/cognito-core';
 
-export type { AuthState, AuthUser, AuthError };
+export type { AuthState, AuthUser, AuthError, SignUpResult, ConfirmSignUpResult };
 
 // Define storage strategy interface
 export interface TokenStorageStrategy {
@@ -42,10 +42,10 @@ export interface AuthProviderConfig extends CognitoConfig {
 }
 
 export type AuthContextValue = AuthState & {
-  signUp: (username: string, password: string, email: string, attributes?: Record<string, string>) => Promise<void>;
+  signUp: (username: string, password: string, email: string, attributes?: Record<string, string>, autoSignIn?: boolean) => Promise<SignUpResult>;
   signIn: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  confirmSignUp: (username: string, code: string) => Promise<void>;
+  confirmSignUp: (username: string, code: string) => Promise<ConfirmSignUpResult>;
   refreshSession: () => Promise<void>;
 };
 
@@ -140,14 +140,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
     username: string,
     password: string,
     email: string,
-    attributes?: Record<string, string>
+    attributes?: Record<string, string>,
+    autoSignIn?: boolean
   ) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      await authService.signUp({ username, password, email, attributes });
+      const result = await authService.signUp({ 
+        username, 
+        password, 
+        email, 
+        attributes,
+        autoSignIn
+      });
       dispatch({ type: 'SET_LOADING', payload: false });
+      return result;
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error as AuthError });
+      throw error;
     }
   };
 
@@ -163,6 +172,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
       dispatch({ type: 'SET_USER', payload: user });
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error as AuthError });
+      throw error;
     }
   };
 
@@ -172,6 +182,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
       await handleSignOut();
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error as AuthError });
+      throw error;
     }
   };
 
@@ -220,10 +231,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
   const confirmSignUp = async (username: string, code: string) => {
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
-      await authService.confirmSignUp(username, code);
+      const result = await authService.confirmSignUp(username, code);
+      
+      // If auto sign-in is enabled, perform auto sign-in
+      if (result.autoSignInEnabled) {
+        try {
+          const user = await authService.autoSignIn(username);
+          if (user) {
+            // If auto sign-in successful, update tokens and user state
+            tokenStorage.setAccessToken(user.tokens.accessToken);
+            tokenStorage.setIdToken(user.tokens.idToken);
+            tokenStorage.setRefreshToken(user.tokens.refreshToken);
+            dispatch({ type: 'SET_USER', payload: user });
+          }
+        } catch (error) {
+          console.error('Auto sign-in failed:', error);
+          // Continue with normal flow if auto sign-in fails
+        }
+      }
+      
       dispatch({ type: 'SET_LOADING', payload: false });
+      return result;
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error as AuthError });
+      throw error;
     }
   };
 

@@ -10,11 +10,21 @@ import {
   GetUserCommandOutput,
   ConfirmSignUpCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
-import type { CognitoConfig, SignUpParams, SignInParams, AuthUser, AuthError } from './types';
+import type { 
+  CognitoConfig, 
+  SignUpParams, 
+  SignInParams, 
+  AuthUser, 
+  AuthError, 
+  SignUpResult, 
+  ConfirmSignUpResult 
+} from './types';
 
 export class CognitoAuthService {
   private client: CognitoIdentityProviderClient;
   private config: CognitoConfig;
+  // Add a map to track users who should be auto-signed in after confirmation
+  private pendingAutoSignIn: Map<string, string> = new Map();
 
   constructor(config: CognitoConfig) {
     this.config = config;
@@ -23,7 +33,7 @@ export class CognitoAuthService {
     });
   }
 
-  async signUp({ username, password, email, attributes = {} }: SignUpParams): Promise<AuthUser> {
+  async signUp({ username, password, email, attributes = {}, autoSignIn = false }: SignUpParams): Promise<SignUpResult> {
     try {
       const command = new SignUpCommand({
         ClientId: this.config.clientId,
@@ -44,15 +54,19 @@ export class CognitoAuthService {
         throw new Error('Failed to create user');
       }
 
+      // If autoSignIn is enabled, store credentials for later use after confirmation
+      if (autoSignIn) {
+        this.pendingAutoSignIn.set(username, password);
+      }
+
       return {
-        username,
-        email,
-        attributes,
-        tokens: {
-          accessToken: '',
-          idToken: '',
-          refreshToken: '',
+        user: {
+          username,
+          email,
+          attributes,
         },
+        userConfirmed: response.UserConfirmed || false,
+        autoSignInEnabled: autoSignIn,
       };
     } catch (error) {
       throw this.handleError(error as Error);
@@ -133,7 +147,7 @@ export class CognitoAuthService {
     }
   }
 
-  async confirmSignUp(username: string, code: string): Promise<void> {
+  async confirmSignUp(username: string, code: string): Promise<ConfirmSignUpResult> {
     try {
       const command = new ConfirmSignUpCommand({
         ClientId: this.config.clientId,
@@ -142,8 +156,40 @@ export class CognitoAuthService {
       });
 
       await this.client.send(command);
+      
+      // Check if this user should be auto-signed in
+      const autoSignInEnabled = this.pendingAutoSignIn.has(username);
+      
+      return {
+        userConfirmed: true,
+        autoSignInEnabled,
+      };
     } catch (error) {
       throw this.handleError(error as Error);
+    }
+  }
+
+  // New method to perform auto sign-in after confirmation
+  async autoSignIn(username: string): Promise<AuthUser | null> {
+    try {
+      // Get stored password if available
+      const password = this.pendingAutoSignIn.get(username);
+      if (!password) {
+        return null;
+      }
+      
+      // Call sign-in with stored credentials
+      const user = await this.signIn({ username, password });
+      
+      // Clean up stored credentials
+      this.pendingAutoSignIn.delete(username);
+      
+      return user;
+    } catch (error) {
+      // If auto sign-in fails, clean up but don't throw
+      this.pendingAutoSignIn.delete(username);
+      console.error('Auto sign-in failed:', error);
+      return null;
     }
   }
 

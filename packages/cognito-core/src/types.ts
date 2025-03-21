@@ -9,6 +9,18 @@ export interface SignUpParams {
   password: string;
   email: string;
   attributes?: Record<string, string>;
+  autoSignIn?: boolean;
+}
+
+export interface SignUpResult {
+  user: Omit<AuthUser, 'tokens'>;
+  userConfirmed: boolean;
+  autoSignInEnabled: boolean;
+}
+
+export interface ConfirmSignUpResult {
+  userConfirmed: boolean;
+  autoSignInEnabled: boolean;
 }
 
 export interface SignInParams {
