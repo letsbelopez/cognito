@@ -1,0 +1,40 @@
+.auth-guard {
+  width: 100%;
+}
+
+.auth-guard--loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.auth-guard__loader {
+  display: inline-block;
+  position: relative;
+  width: 80px;
+  height: 80px;
+  text-align: center;
+}
+
+.auth-guard__loader:after {
+  content: " ";
+  display: block;
+  border-radius: 50%;
+  width: 64px;
+  height: 64px;
+  margin: 8px;
+  box-sizing: border-box;
+  border: 6px solid #0070f3;
+  border-color: #0070f3 transparent #0070f3 transparent;
+  animation: auth-guard-loader 1.2s infinite;
+}
+
+@keyframes auth-guard-loader {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+} 

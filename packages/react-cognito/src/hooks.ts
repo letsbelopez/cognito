@@ -1,15 +1,15 @@
 import { useCallback } from 'react';
 import { useAuth } from './context';
-import type { AuthUser, AuthError } from '@letsbelopez/cognito-core';
+import type { AuthUser, AuthError, SignUpResult, ConfirmSignUpResult } from '@letsbelopez/cognito-core';
 
-interface UseAuthHookResult<T> {
+interface UseAuthHookResult<T, R = void> {
   execute: T;
   isLoading: boolean;
   error: AuthError | null;
 }
 
 export const useSignUp = (): UseAuthHookResult<
-  (username: string, password: string, email: string, attributes?: Record<string, string>) => Promise<void>
+  (username: string, password: string, email: string, attributes?: Record<string, string>, autoSignIn?: boolean) => Promise<SignUpResult>
 > => {
   const { signUp, isLoading, error } = useAuth();
   const execute = useCallback(signUp, [signUp]);
@@ -31,7 +31,7 @@ export const useSignOut = (): UseAuthHookResult<() => Promise<void>> => {
   return { execute, isLoading, error };
 };
 
-export const useConfirmSignUp = (): UseAuthHookResult<(username: string, code: string) => Promise<void>> => {
+export const useConfirmSignUp = (): UseAuthHookResult<(username: string, code: string) => Promise<ConfirmSignUpResult>> => {
   const { confirmSignUp, isLoading, error } = useAuth();
   const execute = useCallback(confirmSignUp, [confirmSignUp]);
 
