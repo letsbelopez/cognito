@@ -46,6 +46,7 @@ export type AuthContextValue = AuthState & {
   signIn: (username: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   confirmSignUp: (username: string, code: string) => Promise<ConfirmSignUpResult>;
+  resendConfirmationCode: (username: string) => Promise<boolean>;
   refreshSession: () => Promise<void>;
 };
 
@@ -172,7 +173,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
       dispatch({ type: 'SET_USER', payload: user });
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error as AuthError });
-      throw error;
     }
   };
 
@@ -182,7 +182,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
       await handleSignOut();
     } catch (error) {
       dispatch({ type: 'SET_ERROR', payload: error as AuthError });
-      throw error;
     }
   };
 
@@ -258,12 +257,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children, config }) 
     }
   };
 
+  const resendConfirmationCode = async (username: string) => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    try {
+      const result = await authService.resendConfirmationCode(username);
+      dispatch({ type: 'SET_LOADING', payload: false });
+      return result;
+    } catch (error) {
+      dispatch({ type: 'SET_ERROR', payload: error as AuthError });
+      throw error;
+    }
+  };
+
   const value = {
     ...state,
     signUp,
     signIn,
     signOut,
     confirmSignUp,
+    resendConfirmationCode,
     refreshSession: refreshTokens,
   } satisfies AuthContextValue;
 

@@ -38,6 +38,13 @@ export const useConfirmSignUp = (): UseAuthHookResult<(username: string, code: s
   return { execute, isLoading, error };
 };
 
+export const useResendConfirmationCode = (): UseAuthHookResult<(username: string) => Promise<boolean>> => {
+  const { resendConfirmationCode, isLoading, error } = useAuth();
+  const execute = useCallback(resendConfirmationCode, [resendConfirmationCode]);
+
+  return { execute, isLoading, error };
+};
+
 export const useCurrentUser = (): {
   user: AuthUser | null;
   isAuthenticated: boolean;

@@ -9,6 +9,7 @@ import {
   InitiateAuthCommandOutput,
   GetUserCommandOutput,
   ConfirmSignUpCommand,
+  ResendConfirmationCodeCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import type { 
   CognitoConfig, 
@@ -215,6 +216,20 @@ export class CognitoAuthService {
         idToken: authResult.IdToken,
         refreshToken: authResult.RefreshToken || refreshToken, // Use existing refresh token if not provided
       };
+    } catch (error) {
+      throw this.handleError(error as Error);
+    }
+  }
+
+  async resendConfirmationCode(username: string): Promise<boolean> {
+    try {
+      const command = new ResendConfirmationCodeCommand({
+        ClientId: this.config.clientId,
+        Username: username,
+      });
+
+      await this.client.send(command);
+      return true;
     } catch (error) {
       throw this.handleError(error as Error);
     }
