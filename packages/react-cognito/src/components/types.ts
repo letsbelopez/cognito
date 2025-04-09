@@ -1,1 +1,0 @@
-export type FormType = 'signin' | 'signup' | 'confirm'; 

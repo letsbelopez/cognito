@@ -8,10 +8,7 @@ import { cognitoConfig } from './config/cognitoConfig'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider config={cognitoConfig}>
       <WithAuthGuard />
-    </AuthProvider>
-
     {/* <App /> */}
   </StrictMode>,
 )

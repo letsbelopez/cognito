@@ -1,166 +1,90 @@
-# @letsbelopez/react-cognito
+# React Cognito Authentication
 
-React components and hooks for AWS Cognito authentication
+A React component library for AWS Cognito authentication with XState state management.
 
 ## Installation
 
 ```bash
-pnpm add @letsbelopez/react-cognito
+npm install @letsbelopez/react-cognito
 ```
 
 ## Usage
 
-### Setting up the AuthProvider
+```jsx
+import { Authenticator } from '@letsbelopez/react-cognito';
 
-First, wrap your application with the `AuthProvider` to configure the authentication context:
-
-```tsx
-import { AuthProvider } from '@letsbelopez/react-cognito';
+const cognitoConfig = {
+  region: 'us-east-1',
+  userPoolId: 'us-east-1_example',
+  clientId: 'your-client-id',
+};
 
 function App() {
   return (
-    <AuthProvider config={{
-      userPoolId: 'your-user-pool-id',
-      clientId: 'your-client-id',
-      region: 'your-region',
-      autoRefreshTokens: true
-    }}>
-      <YourApp />
-    </AuthProvider>
-  );
-}
-```
-
-### Using the AuthGuard Component
-
-The `AuthGuard` component protects content until a user is authenticated. If the user is not authenticated, it displays sign-in and sign-up forms:
-
-```tsx
-import { AuthGuard } from '@letsbelopez/react-cognito';
-
-function PrivateArea() {
-  return (
-    <AuthGuard>
-      {/* This content will only be shown when the user is authenticated */}
-      <h1>Private Content</h1>
-      <p>Welcome to the protected area!</p>
-    </AuthGuard>
-  );
-}
-```
-
-With render props for accessing user data and sign-out function:
-
-```tsx
-import { AuthGuard } from '@letsbelopez/react-cognito';
-
-function PrivateArea() {
-  return (
-    <AuthGuard>
+    <Authenticator cognitoConfig={cognitoConfig}>
       {({ user, signOut }) => (
         <div>
-          <h1>Welcome, {user.username}!</h1>
-          <p>Your email: {user.email}</p>
+          <h1>Welcome, {user.email}!</h1>
           <button onClick={signOut}>Sign Out</button>
-          
-          {/* Rest of your protected content */}
-          <Dashboard userData={user} />
         </div>
       )}
-    </AuthGuard>
+    </Authenticator>
   );
 }
 ```
 
-### Using Hooks
+## Debugging with Stately Inspector
 
-The package provides several hooks for authentication operations:
+This library integrates with [Stately Inspector](https://stately.ai/docs/inspector) to visualize the authentication state machine and help with debugging.
 
-```tsx
-import { 
-  useSignUp, 
-  useSignIn, 
-  useSignOut, 
-  useConfirmSignUp, 
-  useCurrentUser 
-} from '@letsbelopez/react-cognito';
+### Setup
 
-function AuthExample() {
-  const { execute: signUp } = useSignUp();
-  const { execute: signIn } = useSignIn();
-  const { execute: signOut } = useSignOut();
-  const { execute: confirmSignUp } = useConfirmSignUp();
-  const { user, isAuthenticated } = useCurrentUser();
-  
-  // Your component logic here
-}
+1. Install the Stately Inspector package:
+
+```bash
+npm install @statelyai/inspect
 ```
+
+2. The Authenticator component is already configured to connect to the Stately Inspector in development mode.
+
+3. When you render the Authenticator component in development, a new browser window will automatically open with the Stately Inspector, showing a visual representation of the auth state machine.
+
+4. As you interact with the auth forms (sign-in, sign-up, confirmation, etc.), you'll see the state transitions in real-time in the Inspector.
+
+### Example
+
+See an example implementation in `src/examples/AuthWithInspector.tsx`.
+
+### Features of the Stately Inspector
+
+- **State Machine Visualization**: See the entire auth state machine as an interactive diagram
+- **Current State Highlighting**: The current state is highlighted in the diagram
+- **Event History**: Track all events that have been sent to the state machine
+- **Context Inspection**: View the current context values (email, validation errors, etc.)
+- **Sequence Diagrams**: Automatically generated diagrams showing the flow of events between actors
+
+### Turning Off the Inspector
+
+The Inspector only runs in development mode (`process.env.NODE_ENV === 'development'`). In production, the Inspector is automatically disabled.
 
 ## API Reference
 
-### Components
+### Authenticator Component
 
-#### `AuthProvider`
+```jsx
+<Authenticator 
+  cognitoConfig={cognitoConfig}
+  children={({ user, signOut }) => ReactNode}
+/>
+```
 
-Configures the authentication context for your application.
+#### Props
 
-Props:
-- `config`: Configuration object for Cognito
-  - `userPoolId`: Your Cognito User Pool ID
-  - `clientId`: Your Cognito App Client ID
+- `cognitoConfig`: Configuration object for AWS Cognito
   - `region`: AWS region
-  - `autoRefreshTokens`: (optional) Whether to automatically refresh tokens
-  - `refreshInterval`: (optional) Interval in ms for refreshing tokens
-  - `tokenStorage`: (optional) Custom token storage implementation
-  - `onRefreshError`: (optional) Callback for token refresh errors
-  - `onSignOut`: (optional) Callback when user signs out
-
-#### `AuthGuard`
-
-Protects content until a user is authenticated.
-
-Props:
-- `children`: React nodes or render function `({ signOut, user }) => ReactNode`
-- `loadingComponent`: (optional) Custom loading component
-- `useModal`: (optional) Show auth forms in a modal
-- `className`: (optional) Custom CSS class for the container
-- `onError`: (optional) Custom error handler
-
-### Hooks
-
-#### `useSignUp`
-
-```tsx
-const { execute, isLoading, error } = useSignUp();
-const result = await execute(username, password, email, attributes?, autoSignIn?);
-```
-
-#### `useSignIn`
-
-```tsx
-const { execute, isLoading, error } = useSignIn();
-await execute(username, password);
-```
-
-#### `useSignOut`
-
-```tsx
-const { execute, isLoading, error } = useSignOut();
-await execute();
-```
-
-#### `useConfirmSignUp`
-
-```tsx
-const { execute, isLoading, error } = useConfirmSignUp();
-const result = await execute(username, confirmationCode);
-```
-
-#### `useCurrentUser`
-
-```tsx
-const { user, isAuthenticated, isLoading, error } = useCurrentUser();
-```
+  - `userPoolId`: Cognito User Pool ID
+  - `clientId`: Cognito App Client ID
+- `children`: Function that receives the authenticated user and signOut function
 
 ## License
 

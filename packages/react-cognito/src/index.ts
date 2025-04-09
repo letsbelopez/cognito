@@ -7,6 +7,5 @@ export {
   useResendConfirmationCode,
   useCurrentUser
 } from './hooks';
+export { Authenticator } from './components/Authenticator';
 export type { AuthError } from '@letsbelopez/cognito-core';
-export { AuthGuard } from './components/AuthGuard';
-export { AuthForms } from './components/AuthForms';

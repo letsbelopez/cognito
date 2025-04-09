@@ -1,8 +1,9 @@
-import { AuthGuard } from '@letsbelopez/react-cognito';
+import { Authenticator } from '@letsbelopez/react-cognito';
+import { cognitoConfig } from './config/cognitoConfig';
 
 export function WithAuthGuard() {
   return (
-    <AuthGuard>
+    <Authenticator cognitoConfig={cognitoConfig}>
       {({ user, signOut }) => (
         <div>
           <h1>Welcome, {user.username}!</h1>
@@ -15,6 +16,6 @@ export function WithAuthGuard() {
           </div>
         </div>
       )}
-    </AuthGuard>
+    </Authenticator>
   )
 }
