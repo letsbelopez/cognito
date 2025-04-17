@@ -2,6 +2,58 @@ import { createMachine, assign, fromPromise } from 'xstate';
 import { CognitoAuthService } from '@letsbelopez/cognito-core';
 import type { AuthUser, CognitoConfig } from '@letsbelopez/cognito-core';
 
+// Helper for token storage
+const TokenStorage = {
+  storeTokens: (tokens: { accessToken: string; idToken?: string; refreshToken?: string }) => {
+    if (typeof window === 'undefined') return;
+    
+    localStorage.setItem('auth_access_token', tokens.accessToken);
+    if (tokens.idToken) localStorage.setItem('auth_id_token', tokens.idToken);
+    if (tokens.refreshToken) localStorage.setItem('auth_refresh_token', tokens.refreshToken);
+    
+    // Store expiration time (default to 50 minutes from now to refresh before the typical 1 hour expiration)
+    const expiresIn = 50 * 60 * 1000;
+    const expirationTime = Date.now() + expiresIn;
+    localStorage.setItem('auth_expiration', expirationTime.toString());
+  },
+  
+  getTokens: () => {
+    if (typeof window === 'undefined') return null;
+    
+    const accessToken = localStorage.getItem('auth_access_token');
+    const idToken = localStorage.getItem('auth_id_token');
+    const refreshToken = localStorage.getItem('auth_refresh_token');
+    const expirationTimeStr = localStorage.getItem('auth_expiration');
+    
+    if (!accessToken || !refreshToken) return null;
+    
+    return {
+      accessToken,
+      idToken: idToken || undefined,
+      refreshToken,
+      expiresAt: expirationTimeStr ? parseInt(expirationTimeStr, 10) : undefined
+    };
+  },
+  
+  clearTokens: () => {
+    if (typeof window === 'undefined') return;
+    
+    localStorage.removeItem('auth_access_token');
+    localStorage.removeItem('auth_id_token');
+    localStorage.removeItem('auth_refresh_token');
+    localStorage.removeItem('auth_expiration');
+  },
+  
+  isTokenExpiring: () => {
+    const tokens = TokenStorage.getTokens();
+    if (!tokens || !tokens.expiresAt) return false;
+    
+    // Check if token is about to expire (within 5 minutes)
+    const bufferTime = 5 * 60 * 1000;
+    return Date.now() + bufferTime > tokens.expiresAt;
+  }
+};
+
 // TypeScript interfaces for the machine
 interface AuthContext {
   email: string;
@@ -16,6 +68,8 @@ interface AuthContext {
   currentUser: AuthUser | null;
   authService?: CognitoAuthService;
   accessToken?: string;
+  refreshToken?: string;
+  isRefreshing: boolean; // Track if token refresh is in progress
 }
 
 type AuthEvent =
@@ -31,7 +85,10 @@ type AuthEvent =
   | { type: 'CONFIRMATION_ERROR'; error: string }
   | { type: 'CONFIRMATION_EXPIRED' }
   | { type: 'NAVIGATE_TO_SIGNUP' }
-  | { type: 'NAVIGATE_TO_SIGNIN' };
+  | { type: 'NAVIGATE_TO_SIGNIN' }
+  | { type: 'REFRESH_TOKEN' }
+  | { type: 'REFRESH_SUCCESS'; tokens: { accessToken: string; idToken: string; refreshToken: string } }
+  | { type: 'REFRESH_ERROR' };
 
 type AuthTypestate =
   | { value: 'unauthenticated'; context: AuthContext }
@@ -50,21 +107,48 @@ export const createAuthMachine = (config: CognitoConfig) => {
   // Create the auth service
   const authService = new CognitoAuthService(config);
   
+  // Get stored tokens if they exist
+  const storedTokens = TokenStorage.getTokens();
+  const initialState = storedTokens ? 'checkingAuth' : 'unauthenticated';
+  
   return createMachine({
     id: 'auth',
-    initial: 'unauthenticated',
+    initial: initialState,
     context: {
       email: '',
       password: '',
       confirmationCode: '',
       validationErrors: {},
       currentUser: null,
-      accessToken: null,
-      authService
+      authService,
+      accessToken: storedTokens?.accessToken,
+      refreshToken: storedTokens?.refreshToken,
+      isRefreshing: false
     },
     states: {
+      // State to check stored auth on app load
+      checkingAuth: {
+        invoke: {
+          src: 'validateStoredAuth',
+          input: ({ context }) => context,
+          onDone: {
+            target: 'authenticated',
+            actions: assign({
+              currentUser: ({event}) => event.output,
+              accessToken: ({event}) => event.output?.tokens?.accessToken,
+              refreshToken: ({event}) => event.output?.tokens?.refreshToken,
+            })
+          },
+          onError: {
+            target: 'unauthenticated',
+            actions: TokenStorage.clearTokens
+          }
+        }
+      },
+      
       // Initial state when user is not authenticated
       unauthenticated: {
+        entry: TokenStorage.clearTokens,
         on: {
           // Transition to authenticating when user attempts to sign in
           SIGN_IN: {
@@ -172,7 +256,8 @@ export const createAuthMachine = (config: CognitoConfig) => {
             // Store user data in context upon successful authentication
             actions: assign({
               currentUser: ({event}) => event.output,
-              accessToken: ({event}) => event.output?.tokens?.accessToken
+              accessToken: ({event}) => event.output?.tokens?.accessToken,
+              refreshToken: ({event}) => event.output?.tokens?.refreshToken
             })
           },
           onError: [
@@ -302,9 +387,62 @@ export const createAuthMachine = (config: CognitoConfig) => {
       
       // State when user is successfully authenticated
       authenticated: {
+        entry: [
+          assign({ isRefreshing: false }),
+          ({ context, event }) => {
+            // Store tokens when authenticated
+            if (context.accessToken && context.refreshToken) {
+              TokenStorage.storeTokens({
+                accessToken: context.accessToken,
+                idToken: context.currentUser?.tokens?.idToken,
+                refreshToken: context.refreshToken
+              });
+            }
+          }
+        ],
         on: {
           // Transition to signingOut when user attempts to sign out
-          SIGN_OUT: 'signingOut'
+          SIGN_OUT: 'signingOut',
+          // Add token refresh events that don't interrupt the UI
+          REFRESH_TOKEN: {
+            actions: [
+              assign({ isRefreshing: true }),
+              'refreshTokenInBackground'
+            ]
+          },
+          REFRESH_SUCCESS: {
+            actions: [
+              assign({
+                accessToken: ({event}) => event.tokens?.accessToken,
+                refreshToken: ({event}) => event.tokens?.refreshToken,
+                isRefreshing: false
+              }),
+              ({ event }) => {
+                // Update stored tokens
+                TokenStorage.storeTokens({
+                  accessToken: event.tokens.accessToken,
+                  idToken: event.tokens.idToken,
+                  refreshToken: event.tokens.refreshToken
+                });
+              }
+            ]
+          },
+          REFRESH_ERROR: {
+            actions: assign({ isRefreshing: false })
+            // We stay in authenticated state even if refresh fails - we'll try again later
+          }
+        },
+        // Start a timer to check if token needs refreshing
+        after: {
+          // Check token expiration every minute in background
+          '60000': {
+            actions: ({context, self}) => {
+              // Only refresh if not already refreshing and token is expiring
+              if (!context.isRefreshing && TokenStorage.isTokenExpiring() && context.refreshToken) {
+                self.send({ type: 'REFRESH_TOKEN' });
+              }
+            }
+          }
         }
       },
       
@@ -336,6 +474,7 @@ export const createAuthMachine = (config: CognitoConfig) => {
       
       // State when user is signing out
       signingOut: {
+        entry: TokenStorage.clearTokens,
         // Invoke the sign-out service
         invoke: {
           src: 'signOutService',
@@ -471,7 +610,66 @@ export const createAuthMachine = (config: CognitoConfig) => {
         }
         
         return authService.signOut(accessToken);
+      }),
+      
+      // Service to validate stored authentication 
+      validateStoredAuth: fromPromise<AuthUser, AuthContext>(async ({ input }) => {
+        const { authService, accessToken, refreshToken } = input;
+        if (!authService || !accessToken || !refreshToken) {
+          throw new Error('Missing required auth data');
+        }
+        
+        try {
+          // Try to get user with current access token
+          const userData = await authService.getCurrentUser(accessToken);
+          
+          return {
+            ...userData,
+            tokens: {
+              accessToken,
+              refreshToken
+            }
+          } as AuthUser;
+        } catch (error) {
+          // If access token is invalid, try to refresh
+          try {
+            const tokens = await authService.refreshSession(refreshToken);
+            if (!tokens) throw new Error('Failed to refresh session');
+            
+            // Get user data with new token
+            const userData = await authService.getCurrentUser(tokens.accessToken);
+            
+            return {
+              ...userData,
+              tokens
+            } as AuthUser;
+          } catch (refreshError) {
+            // If refresh also fails, authentication is invalid
+            TokenStorage.clearTokens();
+            throw refreshError;
+          }
+        }
       })
+    },
+    
+    // Add actions for background token refresh
+    actions: {
+      refreshTokenInBackground: ({ context, self }) => {
+        if (!context.authService || !context.refreshToken) return;
+        
+        // Execute token refresh in background without changing state
+        context.authService.refreshSession(context.refreshToken)
+          .then(tokens => {
+            if (tokens) {
+              self.send({ type: 'REFRESH_SUCCESS', tokens });
+            } else {
+              self.send({ type: 'REFRESH_ERROR' });
+            }
+          })
+          .catch(() => {
+            self.send({ type: 'REFRESH_ERROR' });
+          });
+      }
     }
   });
 };
